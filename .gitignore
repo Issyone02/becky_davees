@@ -1,0 +1,28 @@
+# Dependencies (too large for GitHub)
+node_modules/
+dist/
+
+# Environment secrets (NEVER share passwords)
+.env
+.env.local
+.env.*.local
+
+# Uploads (user photos, logos, etc.)
+uploads/
+
+# Database files
+prisma/dev.db
+prisma/dev.db-journal
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs and temp files
+*.log
+npm-debug.log*
+
+# Build output
+*.tsbuildinfo
