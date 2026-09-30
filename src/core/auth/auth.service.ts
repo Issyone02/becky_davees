@@ -2,7 +2,7 @@ import { db } from '../../config/db';
 import { hashPassword, verifyPassword, validatePasswordStrength, isPasswordInHistory, HISTORY_COUNT } from './password';
 import { signAccessToken, signRefreshToken, verifyRefreshToken, hashRefreshToken, TokenPayload } from './jwt';
 import { UnauthorizedError, ValidationError, ConflictError, ForbiddenError, NotFoundError, AppError } from '../../shared/errors';
-import { checkLockout, recordFailure, recordSuccess } from './loginGuard';
+import { checkLockout, recordFailure, recordSuccess } from './LoginGuard';
 import { logAudit } from '../audit/audit.service';
 import { env } from '../../config/env';
 import * as notify from '../notify/notify.service';
