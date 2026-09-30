@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import * as authService from './auth.service';
 import { success } from '../../shared/response';
-import { handleError } from '../../shared/errors';
+import { UnauthorizedError } from '../../shared/errors';
+import { db } from '../../config/db';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -26,14 +27,14 @@ const changePasswordSchema = z.object({
 export async function loginController(req: Request, res: Response, next: NextFunction) {
   try {
     const body = loginSchema.parse(req.body);
-        const result = await authService.login(body.emailOrUsername, body.password, req.ip, req.headers['user-agent'] as string);
+    const result = await authService.login(body.emailOrUsername, body.password, req.ip, req.headers['user-agent'] as string);
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    // Return refreshToken in body too for mobile clients; web uses httpOnly cookie
     success(res, result);
   } catch (e) { next(e); }
 }
@@ -41,10 +42,13 @@ export async function loginController(req: Request, res: Response, next: NextFun
 export async function refreshController(req: Request, res: Response, next: NextFunction) {
   try {
     const token = req.body.refreshToken ?? req.cookies?.refreshToken;
-    if (!token) throw new Error('Missing refresh token');
+    if (!token) throw new UnauthorizedError('Missing refresh token');
     const result = await authService.refreshAccessToken(token);
     res.cookie('refreshToken', result.refreshToken, {
-      httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     success(res, result);
@@ -54,7 +58,7 @@ export async function refreshController(req: Request, res: Response, next: NextF
 export async function logoutController(req: Request, res: Response, next: NextFunction) {
   try {
     await authService.logout(req.user!.id, req.body.refreshTokenHash);
-    res.clearCookie('refreshToken');
+    res.clearCookie('refreshToken', { path: '/' });
     success(res, { message: 'Logged out' });
   } catch (e) { next(e); }
 }
