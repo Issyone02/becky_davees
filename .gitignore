@@ -8,7 +8,7 @@ dist/
 .env.*.local
 
 # Uploads (user photos, logos, etc.)
-uploads/
+/uploads/
 
 # Database files
 prisma/dev.db
