@@ -30,7 +30,7 @@ import parentsRoutes from './modules/parents/parent.routes';
 import feedbackRoutes from './modules/feedback/feedback.routes';
 import messagingRoutes from './modules/messaging/messaging.routes';
 import promotionsRoutes from './modules/promotions/promotions.routes';
-
+import compression from 'compression';
   
 
 export function createApp() {
@@ -45,7 +45,15 @@ export function createApp() {
   app.use(morgan('combined'));
   app.use(express.json({ limit: '2mb' }));
   app.use(cookieParser());
-    app.use('/uploads', express.static(path.resolve(process.cwd(), process.env.UPLOAD_DIR || './uploads')));
+  app.use('/uploads', express.static(path.resolve(process.cwd(), process.env.UPLOAD_DIR || './uploads')));
+
+     app.use(compression());
+
+   app.get('/api/health', (_req, res) => {
+     res.json({ ok: true, uptime: process.uptime() });
+   });
+
+
 
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,

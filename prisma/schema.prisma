@@ -319,6 +319,7 @@ model Result {
   enterer       User     @relation(fields: [enteredBy], references: [id])
   @@unique([studentId, subjectId, sessionId, termId])
   @@map("results")
+  @@index([studentId, termId])
 }
 
 model ReportCard {
@@ -375,6 +376,7 @@ model FeeStructure {
   payments  Payment[]
   @@unique([classId, sessionId, termId, feeType])
   @@map("fee_structures")
+  @@index([classId, termId])
 }
 
 model Payment {
@@ -401,7 +403,7 @@ model Payment {
   session           AcademicSession @relation(fields: [sessionId], references: [id])
   term              Term     @relation(fields: [termId], references: [id])
   audits            PaymentAudit[]
-
+  @@index([studentId, termId])
   @@index([studentId, sessionId, termId])
   @@map("payments")
 }
