@@ -129,13 +129,13 @@ export async function attendanceChart(days: number, userId: string, role: string
   if (classIds) where.classId = { in: classIds };
   const records = await db.attendanceRecord.findMany({ where, select: { date: true, status: true } });
 
-  // Buckets use LOCAL calendar days, so the chart always agrees with
-  // Today's Attendance and the parent calendar.
-  const byDate = new Map<string, { date: string; present: number; absent: number; late: number; excused: number }>();
+  const byDate = new Map<string, { date: string; iso: string; present: number; absent: number; late: number; excused: number }>();
   const cursor = new Date(from);
   for (let i = 0; i < days; i++) {
-    byDate.set(dayKey(cursor), {
+    const key = dayKey(cursor);
+    byDate.set(key, {
       date: cursor.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+      iso: key,
       present: 0,
       absent: 0,
       late: 0,
