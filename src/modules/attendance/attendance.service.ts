@@ -25,7 +25,6 @@ export async function myTeachingClasses(userId: string, termId?: string) {
     include: { class: true, subject: true },
   });
 
-  // Fetch term/session names separately (no relations on TeacherClassSubject)
   const termIds = Array.from(new Set(assignments.map((a) => a.termId)));
   const sessionIds = Array.from(new Set(assignments.map((a) => a.sessionId)));
   const [terms, sessions] = await Promise.all([
@@ -65,6 +64,7 @@ export async function myTeachingClasses(userId: string, termId?: string) {
 
 export async function getRegister(params: { classId: string; date: string; termId: string }) {
   const date = dayStart(params.date);
+  const dayEnd = new Date(date.getTime() + 24 * 60 * 60 * 1000);
   const [students, records] = await Promise.all([
     db.student.findMany({
       where: { classId: params.classId, status: 'active' },
@@ -72,7 +72,8 @@ export async function getRegister(params: { classId: string; date: string; termI
       select: { id: true, studentId: true, fullName: true, gender: true },
     }),
     db.attendanceRecord.findMany({
-      where: { classId: params.classId, date, termId: params.termId },
+      // Day-window lookup: catches all records for this calendar day
+      where: { classId: params.classId, termId: params.termId, date: { gte: date, lt: dayEnd } },
       include: { marker: { select: { fullName: true } } },
     }),
   ]);
@@ -85,6 +86,7 @@ export async function saveRegister(input: {
   reason?: string;
 }, actor: Actor) {
   const date = dayStart(input.date);
+  const dayEnd = new Date(date.getTime() + 24 * 60 * 60 * 1000);
 
   const term = await db.term.findUnique({ where: { id: input.termId } });
   if (!term) throw new NotFoundError('Term', input.termId);
@@ -102,25 +104,29 @@ export async function saveRegister(input: {
     if (!assigned) throw new ForbiddenError('You are not assigned to teach this class in the selected term.');
   }
 
+  // Day-window lookup to catch all records for this calendar day
   const existing = await db.attendanceRecord.findMany({
-    where: { classId: input.classId, date, termId: input.termId },
+    where: { classId: input.classId, termId: input.termId, date: { gte: date, lt: dayEnd } },
   });
   const isUpdate = existing.length > 0;
 
+  // RULE 1: Teachers mark once. Only admins can edit an already marked register.
+  if (isUpdate && actor.role === 'TEACHER') {
+    throw new ForbiddenError('This register has already been marked. Only an administrator can modify it.');
+  }
+
   if (isUpdate) {
-    const markedAt = existing[0].markedAt.getTime();
-    const withinWindow = Date.now() - markedAt < LOCK_WINDOW_MS;
-    if (!withinWindow && actor.role === 'TEACHER') {
-      throw new ForbiddenError('This register is locked: the 24-hour edit window has passed. Contact an administrator for corrections.');
-    }
     if (!input.reason || input.reason.trim().length < 5) {
       throw new ValidationError('A reason (minimum 5 characters) is required to modify an existing register.');
     }
   }
 
+  const reasonText = (input.reason ?? '').trim() || 'Admin correction';
+
   for (const e of input.entries) {
     const prev = existing.find((x) => x.studentId === e.studentId);
     if (prev) {
+      // Student already has a mark for this day. Update it in place (count will NOT increase).
       if (prev.status !== e.status) {
         await db.attendanceRecord.update({
           where: { id: prev.id },
@@ -131,12 +137,13 @@ export async function saveRegister(input: {
             attendanceId: prev.id,
             previousStatus: prev.status,
             newStatus: e.status,
-            reason: input.reason!.trim(),
+            reason: reasonText,
             approvedBy: actor.id,
           },
         });
       }
     } else {
+      // Student has NO mark for this day. Insert a new row.
       await db.attendanceRecord.create({
         data: {
           studentId: e.studentId, classId: input.classId, sessionId: input.sessionId,
