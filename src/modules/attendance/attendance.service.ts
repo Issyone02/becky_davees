@@ -6,7 +6,10 @@ type Actor = { id: string; role: string };
 const LOCK_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 function fmt(d: Date) { return d.toISOString().slice(0, 10); }
-function dayStart(dateStr: string) { return new Date(dateStr + 'T00:00:00'); }
+function dayStart(dateStr: string) { 
+  const ymd = String(dateStr).slice(0, 10); // Extracts exactly "YYYY-MM-DD"
+  return new Date(ymd + 'T00:00:00.000Z'); // Forces strict UTC midnight
+}
 
 async function resolveTeacherId(userId: string): Promise<string | null> {
   const teacher = await db.teacher.findUnique({ where: { userId }, select: { id: true } });

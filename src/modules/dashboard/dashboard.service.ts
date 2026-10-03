@@ -14,8 +14,8 @@ function setCache<T>(key: string, data: T, ttlMs = 30000) {
 function daysAgo(n: number) {
   const d = new Date();
   d.setDate(d.getDate() - n);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const ymd = d.toLocaleDateString('en-CA'); // Safely gets local YYYY-MM-DD
+  return new Date(ymd + 'T00:00:00.000Z'); // Matches the database UTC midnight
 }
 
 export async function stats(userId: string, role: string) {
@@ -69,13 +69,16 @@ export async function stats(userId: string, role: string) {
       my: { children: kids.length, names: kids.map((k) => ({ id: k.id, name: k.fullName, className: k.class?.name })) } 
     };
   } else {
-    // ADMIN / SUPER_ADMIN
-    const [totalStudents, totalClasses, totalTeachers, pending, todayAttendance, collected, billed] = await Promise.all([
-      db.student.count({ where: { status: 'active' } }),
-      db.class.count(),
-      db.teacher.count(),
-      db.user.count({ where: { status: 'PENDING' } }),
-      db.attendanceRecord.groupBy({ by: ['status'], where: { date: { gte: daysAgo(0) } }, _count: true }),
+  // ADMIN / SUPER_ADMIN
+  const startToday = daysAgo(0);
+  const startTomorrow = new Date(startToday);
+  startTomorrow.setDate(startTomorrow.getDate() + 1);
+  const [totalStudents, totalClasses, totalTeachers, pending, todayAttendance, collected, billed] = await Promise.all([
+    db.student.count({ where: { status: 'active' } }),
+    db.class.count(),
+    db.teacher.count(),
+    db.user.count({ where: { status: 'PENDING' } }),
+    db.attendanceRecord.groupBy({ by: ['status'], where: { date: { gte: startToday, lt: startTomorrow } }, _count: true }),
       currentTerm ? db.payment.aggregate({ where: { termId: currentTerm.id, status: 'paid' }, _sum: { amountPaid: true } }) : Promise.resolve({ _sum: { amountPaid: 0 } }),
       currentTerm ? db.feeStructure.aggregate({ where: { termId: currentTerm.id }, _sum: { amount: true } }) : Promise.resolve({ _sum: { amount: 0 } }),
     ]);
@@ -98,7 +101,7 @@ export async function stats(userId: string, role: string) {
 }
 
 function dayKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`;
 }
 
 export async function attendanceChart(days: number, userId: string, role: string) {
