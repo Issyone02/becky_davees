@@ -5,6 +5,23 @@ import { success } from '../../shared/response';
 import { z } from 'zod';
 
 const router = Router();
+
+// Public branding info (no login required) — used by the login page and the sidebar crest.
+// Returns ONLY non-sensitive fields. Placed BEFORE authenticate so it is public.
+router.get('/public-info', async (_req, res, next) => {
+  try {
+    const s = await db.schoolSetting.findFirst();
+    success(res, {
+      schoolName: s?.schoolName ?? null,
+      motto: s?.motto ?? null,
+      address: s?.address ?? null,
+      phone: s?.phone ?? null,
+      email: s?.email ?? null,
+      logoUrl: s?.logoUrl ?? null,
+    });
+  } catch (e) { next(e); }
+});
+
 router.use(authenticate);
 
 router.get('/', async (_req, res, next) => {
