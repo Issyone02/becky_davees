@@ -30,6 +30,7 @@ import parentsRoutes from './modules/parents/parent.routes';
 import feedbackRoutes from './modules/feedback/feedback.routes';
 import messagingRoutes from './modules/messaging/messaging.routes';
 import promotionsRoutes from './modules/promotions/promotions.routes';
+import publicRoutes from './modules/public/public.routes';
 import compression from 'compression';
   
 
@@ -91,6 +92,7 @@ export function createApp() {
   app.use('/api/feedback', feedbackRoutes);
   app.use('/api/messaging', messagingRoutes);
   app.use('/api/promotions', promotionsRoutes);
+  app.use('/api/public', publicRoutes);
 
   app.use((_req, res) => res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Endpoint not found' } }));
 
