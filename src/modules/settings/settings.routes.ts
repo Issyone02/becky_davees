@@ -18,6 +18,7 @@ router.get('/public-info', async (_req, res, next) => {
       phone: s?.phone ?? null,
       email: s?.email ?? null,
       logoUrl: s?.logoUrl ?? null,
+      brandColor: s?.brandColor ?? null,
     });
   } catch (e) { next(e); }
 });
@@ -40,6 +41,7 @@ router.patch('/', requireRole('SUPER_ADMIN', 'ADMIN'), async (req, res, next) =>
       logoUrl: z.string().nullable().optional(),
       officialStampUrl: z.string().nullable().optional(),
       headTeacherSignatureUrl: z.string().nullable().optional(),
+      brandColor: z.string().nullable().optional(),
     }).parse(req.body);
     const existing = await db.schoolSetting.findFirst();
     const updated = existing

@@ -31,7 +31,7 @@ async function sendViaBrevoApi(cfg: any, to: string, subject: string, html: stri
       accept: 'application/json',
     },
     body: JSON.stringify({
-      sender: { email: cfg.mailFrom ?? 'no-reply@schoolms.local', name: 'Becky Davees School' },
+      sender: { email: cfg.mailFrom ?? 'no-reply@schoolms.local', name: 'Mannaplus School' },
       to: [{ email: to }],
       subject,
       htmlContent: html,
@@ -45,13 +45,14 @@ async function sendViaBrevoApi(cfg: any, to: string, subject: string, html: stri
 
 function brandWrap(s: any, inner: string): string {
   const name = s?.schoolName ?? 'The School';
+  const accent = s?.brandColor || '#4f46e5';
   const motto = s?.motto ? `<div style="font-size:12px;font-style:italic;color:#6b7280;margin-top:2px;">${s.motto}</div>` : '';
   const logo = s?.logoUrl ? `<img src="${s.logoUrl}" alt="${name} logo" style="height:56px;margin:0 auto 8px;display:block;" />` : '';
   const contact = [s?.address, s?.phone, s?.email].filter(Boolean).join(' &nbsp;|&nbsp; ');
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;padding:24px 12px;">
     <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
-      <div style="padding:24px 24px 16px;text-align:center;border-bottom:3px solid #4f46e5;">
+      <div style="padding:24px 24px 16px;text-align:center;border-bottom:3px solid ${accent};">
         ${logo}
         <div style="font-size:18px;font-weight:700;color:#111827;">${name}</div>
         ${motto}

@@ -530,6 +530,7 @@ model SchoolSetting {
   address                  String?
   phone                    String?
   email                    String?
+  brandColor               String?
   logoUrl                  String?  @map("logo_url")
   officialStampUrl         String?  @map("official_stamp_url")
   headTeacherName          String?  @map("head_teacher_name")
