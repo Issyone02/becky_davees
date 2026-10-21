@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../../config/db';
 import { success } from '../../shared/response';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -66,6 +67,61 @@ router.get('/verify/report-card/:studentId/:termId', async (req, res, next) => {
       logoUrl: s?.logoUrl ?? null,
       motto: s?.motto ?? null,
     });
+  } catch (e) { next(e); }
+});
+
+// Public news — only audience 'all' and published
+router.get('/news', async (_req, res, next) => {
+  try {
+    const items = await db.news.findMany({
+      where: { status: 'published', audience: 'all' },
+      include: { author: { select: { fullName: true } } },
+      orderBy: { publishedAt: 'desc' },
+      take: 30,
+    });
+    success(res, items);
+  } catch (e) { next(e); }
+});
+
+// Public upcoming events — only audience 'all'
+router.get('/events', async (_req, res, next) => {
+  try {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const items = await db.event.findMany({
+      where: {
+        audience: 'all',
+        OR: [
+          { endDate: { gte: startOfToday } },
+          { endDate: null, startDate: { gte: startOfToday } },
+        ],
+      },
+      orderBy: { startDate: 'asc' },
+      take: 20,
+    });
+    success(res, items);
+  } catch (e) { next(e); }
+});
+
+// Public contact form — emails the school's configured address
+router.post('/contact', async (req, res, next) => {
+  try {
+    const q = z.object({
+      name: z.string().min(2),
+      email: z.string().email(),
+      message: z.string().min(10),
+    }).parse(req.body);
+    const s = await db.schoolSetting.findFirst();
+    if (!s?.email) {
+      return res.status(400).json({ success: false, error: { code: 'NO_SCHOOL_EMAIL', message: 'School email not configured.' } });
+    }
+    const { sendMail } = await import('../../core/mail/mail.service');
+    await sendMail(s.email, `Website enquiry from ${q.name}`, `
+      <p><strong>Name:</strong> ${q.name}</p>
+      <p><strong>Email:</strong> ${q.email}</p>
+      <p><strong>Message:</strong></p><p>${q.message}</p>
+    `);
+    success(res, { sent: true });
   } catch (e) { next(e); }
 });
 
